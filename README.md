@@ -18,4 +18,4 @@ install_github("giovannitoto/cosin")
 
 ## Usage
 
-See the [vignette](https://github.com/giovannitoto/cosin/tree/master/doc/intro.html) for an example of the package usage.
+See this [vignette](https://github.com/giovannitoto/cosin/tree/master/vignettes/intro.Rmd) for an example of the package usage.
