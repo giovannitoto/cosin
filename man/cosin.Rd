@@ -2,7 +2,7 @@
 % Please edit documentation in R/cosin.R
 \name{cosin}
 \alias{cosin}
-\title{AGS for GIF model with COSIN prior}
+\title{Adaptive Gibbs Sampler for COSIN}
 \usage{
 cosin(
   y,
@@ -42,15 +42,15 @@ cosin(
 \arguments{
 \item{y}{A \eqn{n\times p} matrix \eqn{y} of gene expression.}
 
-\item{wT}{A matrix \eqn{w_T} of gene-specific technical meta-covariates having \eqn{p} rows; the variables must be numeric or factors.}
+\item{wT}{A matrix or data frame \eqn{w_T} of gene-specific technical meta-covariates having \eqn{p} rows; the variables must be numeric or factors.}
 
-\item{wB}{A matrix \eqn{w_B} of gene-specific biological meta-covariates having \eqn{p} rows; the variables must be numeric or factors.}
+\item{wB}{A matrix or data frame \eqn{w_B} of gene-specific biological meta-covariates having \eqn{p} rows; the variables must be numeric or factors.}
 
-\item{x}{A matrix \eqn{w} of cell-specific covariates having \eqn{n} rows; the variables must be numeric or factors.}
+\item{x}{A matrix or data frame \eqn{x} of cell-specific covariates having \eqn{n} rows; the variables must be numeric or factors.}
 
 \item{y_max}{A fixed and known upper bound for the values in \code{y}. Default is \code{Inf}.}
 
-\item{wTformula}{Formula specifying the gene-specific technical meta-covariates used in the process mean inserted in the model.}
+\item{wTformula}{Formula specifying the gene-specific technical meta-covariates used in the process mean.}
 
 \item{wBformula}{Formula specifying the gene-specific biological meta-covariates used in the COSIN prior.}
 
@@ -62,9 +62,9 @@ cosin(
 
 \item{stdx}{Logical: if \code{TRUE}, numeric cell-specific covariates are standardized; by default they are standardized.}
 
-\item{sd_gammaT}{Standard deviation for \eqn{\gamma_{mT}} prior distribution. Default is \eqn{\sigma_{\Gamma_T}=1}.}
+\item{sd_gammaT}{Standard deviation for \eqn{\gamma_{mT}} prior distribution. Default is \eqn{\sigma_{\gamma_T}=1}.}
 
-\item{sd_gammaB}{Standard deviation for \eqn{\gamma_{hB}} prior distribution. Default is \eqn{\sigma_{\Gamma_B}=1}.}
+\item{sd_gammaB}{Standard deviation for \eqn{\gamma_{hB}} prior distribution. Default is \eqn{\sigma_{\gamma_B}=1}.}
 
 \item{sd_beta}{Standard deviation for \eqn{\beta_j} prior distribution. Default is \eqn{\sigma_\mu=1}.}
 
@@ -117,7 +117,7 @@ A list with the following elements:
 }
 }
 \description{
-Implementation of the Adaptive Gibbs Sampler (AGS) for a Generalized Infinite Factor (GIF) model with COunt data Structured INfinite factorization (COSIN) prior.
+Implementation of the Adaptive Gibbs Sampler for COunt data Structured INfinite factorization (COSIN).
 }
 \details{
 Suppose we have a \eqn{n\times p} matrix \eqn{y} of gene expression containing the counts for \eqn{p}
@@ -134,19 +134,17 @@ Thus, the single entry \eqn{y_{ij}} of \eqn{y} is linked to a latent \eqn{z_{ij}
 \eqn{y_{ij} = l \quad\text{if}\quad\exp\{z_{ij}\}\in[l,l+1)}.
 
 The latent variables \eqn{z_{ij}} are modeled via
-\deqn{z_{ij} = x_i^\top\beta_j+\epsilon_{ij},}
-\deqn{\epsilon_{ij}=\sum_{h=1}^k\lambda_{jh}\eta_{ih}+\varepsilon_{ij},}
-\deqn{\varepsilon_{i}\sim N(0,\Sigma),}
+\deqn{z_{ij} = x_i^\top\beta_j+\epsilon_{ij}, \quad \epsilon_{ij}=\sum_{h=1}^k\lambda_{jh}\eta_{ih}+\varepsilon_{ij}, \quad \varepsilon_{i}\sim N(0,\Sigma),}
 where \eqn{\beta_j} is a row of the \eqn{p\times} d matrix \eqn{\beta}, \eqn{\lambda_{jh}} is an element of the \eqn{p\times k} factor loading matrix \eqn{\lambda},
 \eqn{\eta_{ih}} is an element of the \eqn{n\times k} latent factor matrix \eqn{\eta}, and
 \eqn{\varepsilon_{1},\ldots,\varepsilon_{n}} are iid random errors with \eqn{\Sigma=diag(\sigma^2_1,\ldots,\sigma^2_p)}.
 
 Following a Bayesian approach we elicit suitable prior distributions for the model parameters:
-\deqn{\beta_j\sim N_d(\Gamma_Tw_{jT},\sigma^2_\beta I_d), \quad \gamma_{mT}\sim N_d(0,\sigma^2_{\Gamma_T}I_d),}
+\deqn{\beta_j\sim N_d(\Gamma_Tw_{jT},\sigma^2_\beta I_d), \quad \gamma_{mT}\sim N_d(0,\sigma^2_{\gamma_T}I_d),}
 \deqn{\eta_i\sim N_k(0, I_k), \quad \sigma^{-2}_j\sim Ga(a_\sigma,b_\sigma),}
 \deqn{\lambda_{jh}\sim N(0,\vartheta_{jh}\rho_h\phi_{jh}), \quad \vartheta^{-1}_h\sim Ga(a_\theta,b_\theta),}
 \deqn{\rho_h\sim Bern(1-\pi_h), \quad \pi_h=\sum_{l=1}^hv_l\prod_{m=1}^{l-1}v_m, \quad v_m\sim Beta(1,\alpha),}
-\deqn{E[\phi_{jh}] = c_p\text{logit}^{-1}(w_{jB}^\top\gamma_{hB}), \quad \gamma_{hB}\sim N_{q_B}(0,\sigma^2_{\Gamma_B}I_{q_B}),}
+\deqn{E[\phi_{jh}] = c_p\text{logit}^{-1}(w_{jB}^\top\gamma_{hB}), \quad \gamma_{hB}\sim N_{q_B}(0,\sigma^2_{\gamma_B}I_{q_B}),}
 where \eqn{\gamma_{mT}} is a column of the \eqn{d\times q_T} coefficient matrix \eqn{\Gamma_T},
 \eqn{\gamma_{hB}} is a column of the \eqn{q_B\times k} coefficient matrix \eqn{\Gamma_B} and \eqn{c_p\in(0,1)} is a offset.
 }

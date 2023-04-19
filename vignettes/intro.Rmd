@@ -1,0 +1,224 @@
+---
+title: "COunt data Structured INfinite factorization"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{intro}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r options, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(warning=FALSE,
+                      error=FALSE,
+                      message=FALSE,
+                      collapse = TRUE,
+                      comment = "#>")
+set.seed(28)
+```
+
+This vignette provides an introductory example on how to work with the `cosin` package, which implements COunt data Structured INfinite factorization (COSIN).
+
+```{r setup}
+library(cosin)
+```
+
+## Dataset
+
+We consider a small test dataset included in the package. In particular, we load four matrices:
+
+-   `y`: matrix of gene expression,
+-   `wT`: gene-specific technical meta-covariates,
+-   `wB`: gene-specific biological meta-covariates,
+-   `x`: cell-specific covariates,
+
+```{r data}
+data(y, package="cosin")
+data(wT, package="cosin")
+data(wB, package="cosin")
+data(x, package="cosin")
+```
+
+## Posterior computation
+
+Posterior computation is carried out through the function `cosin()`; the arguments of the function can be divided into 6 groups:
+
+1.  arguments related to the data;
+2.  arguments related to data preparation;
+3.  arguments related to model parameters;
+4.  arguments related to latent factors;
+5.  arguments related to the *Adaptive Gibbs Sampler*;
+6.  other arguments.
+
+Here we use the default value for each argument:
+
+```{r inputs}
+# 1
+y <- y
+wT = wT
+wB = wB
+x = x
+# 2
+y_max = Inf
+wTformula = formula("~ .")
+wBformula = formula("~ .")
+xFormula = formula("~ .")
+stdwT = TRUE
+stdwB = TRUE
+stdx = TRUE
+# 3
+sd_gammaT = 1
+sd_gammaB = 1
+sd_beta = 1
+a_theta = 1
+b_theta = 1
+a_sigma = 1
+b_sigma = 1
+alpha = 5
+p_constant = 0.5
+# 4
+kinit = NULL
+kmax = NULL
+kval = 6
+# 5
+nrun = 100
+burn = round(nrun/4)
+thin = 1
+start_adapt = 20
+b0 = 1
+b1 = 5 * 10^(-4)
+# 6
+seed = 496
+output = "all"
+verbose = TRUE
+```
+
+We launch the *adaptive Gibbs sampler* and save the results of the posterior inference in a variable called `out_MCMC`.
+
+```{r cosin}
+out_MCMC <- cosin(y = y, wT = wT, wB = wB, x = x,
+                  y_max = y_max, wTformula = wTformula, 
+                  wBformula = wBformula, xFormula = xFormula,
+                  stdwT = stdwT, stdwB = stdwB, stdx = stdx,
+                  sd_gammaT = sd_gammaT, sd_gammaB = sd_gammaB, sd_beta = sd_beta,
+                  a_theta = a_theta, b_theta = b_theta,
+                  a_sigma = a_sigma, b_sigma = b_sigma,
+                  alpha = alpha, p_constant = p_constant,
+                  kinit = kinit, kmax = kmax, kval = kval,
+                  nrun = nrun, burn = burn, thin = thin,
+                  start_adapt = start_adapt, b0 = b0, b1 = b1,
+                  seed = seed, output = output, verbose = verbose)
+```
+
+`out_MCMC` is a list object containing:
+
+-   `numFactors`: a vector containing the number of active factors at each saved iteration;
+
+-   `beta`, `gammaT`, `gammaB`, `eta`, `Lambda`, `sigmacol`: lists containing draws from the posterior distribution of $\beta$, $\Gamma_T$ , $\Gamma_B$, $\eta$, $\Lambda$ and $(\sigma_1^{-2},\ldots,\sigma_p^{-2})$;
+
+-   `time`: total elapsed time.
+
+-   `y`, `wT`, `wB` and `x`: matrices of counts, gene-specific meta-covariates and cell-specific covariates; it should be noted that the matrices `wT`, `wB` and `x` given as input to the function and the ones in `out_MCMC` can be different since the latter are obtained as a result of variable selection, standardization of numerical variables and conversion of factors into dichotomous variables;
+
+-   `hyperparameters`: a list containing the parameters of the model and other arguments of the function.
+
+```{r out_MCMC}
+names(out_MCMC)
+```
+
+## Post-processing
+
+First, we show how to observe the evolution of the number of factors as the algorithm goes on, then we explain how to obtain posterior estimates of the parameters from `out_MCMC` using the functions `posterior_mean()`, `lposterior()` and `contributions()`.
+
+### Adaptation
+
+The number of factors, potentially infinite, is selected through the use of an *Adaptive Gibbs Sampler*. We can use `numFactors` to observe how the number of factors varies as the algorithm goes on. We plot below the number of active factor at each saved iteration.
+
+```{r numFactors, fig.dim = c(6, 4), fig.align = 'center'}
+plot(1:length(out_MCMC$numFactors), out_MCMC$numFactors,
+     type="b", pch = 20, xlab = "iteration", ylab = "active factors")
+```
+
+### Parameter estimation
+
+We are interested in the estimation of the parameters of the model. In particular, we estimate $\beta$, $\Gamma_T$ and $\Sigma^{-1}=diag(\sigma^{-2}_1,\ldots,\sigma^{-2}_p)$, by approximating their posterior mean with the mean of their MCMC draws; we estimate $\Gamma_B$, $\eta$ and $\Lambda$ by approximating their posterior mode with the values they take at the MCMC iteration with the highest marginal posterior density function. Finally, we are also interested in the estimation of $\Omega=\Lambda\Lambda^\top+\Sigma$ and $\Omega^{-1}$, which are approximations of the covariance matrix and of the partial correlation matrix respectively.
+
+#### Posterior means
+
+The computation of the posterior means is carried out through the function `posterior_mean()`; the `parameters` argument specifies the parameters for which we want to compute the posterior mean.
+
+```{r posterior_mean_k}
+pmean_k <- posterior_mean(out_MCMC, parameters = "all", columns = "k")
+```
+
+By default the posterior means of $\Omega$ and $\Omega^{-1}$ are computed considering both active and inactive factors (`"k"`). If we want to consider active factors only (`"kstar"`), we can use the `columns` argument as follows:
+
+```{r posterior_mean_kstar}
+pmean_kstar <- posterior_mean(out_MCMC, parameters = "all", columns = "kstar")
+```
+
+The function returns a list object containing the posterior means; as an example we show the posterior mean of $\sigma^{-2}_1,\ldots,\sigma^{-2}_p$:
+
+```{r sigmacol_mean}
+pmean_k$sigmacol
+```
+
+#### Log-posterior probabilities and posterior modes
+
+The computation of the log-posterior probabilities and the identification of the posterior modes are carried out through the function `lposterior();`the `parameters` argument specifies the parameters for which we want to compute the posterior mode.
+
+```{r lposterior_k}
+lpost_k <- lposterior(out_MCMC, columns = "k")
+```
+
+As before, by default the log-posterior probabilities are computed considering both active and inactive factors (`"k"`). If we want to consider active factors only (`"kstar"`), we can use the `columns` argument as follows:
+
+```{r lposterior_kstar}
+lpost_kstar <- lposterior(out_MCMC, columns = "kstar")
+```
+
+The function returns a list object containing the log-posterior probabilities computed at each iteration of the chain (`lposterior`), or of the subset specified with `samples` argument, the index of the iteration in which the log-posterior probability reaches its maximum (`iteration_max`) and the posterior modes of the parameters, i.e. the value of the parameters at `iteration_max`th iteration.
+
+As an example we show the posterior mode of $\sigma^{-2}_1,\ldots,\sigma^{-2}_p$:
+
+```{r sigmacol_mode}
+lpost_k$sigmacol_max
+```
+
+We show below that considering active factors only (red) or both active and inactive factors (blue) can provide slightly different results in terms of log-posterior probabilities.
+
+```{r lposterior_plot, fig.dim = c(6, 4), fig.align = 'center'}
+plot(lpost_k$sampled, lpost_k$lposterior, type="b", pch = 1, 
+     col = 4, xlab = "iteration", ylab = "lposterior",
+     ylim = c(min(lpost_k$lposterior, lpost_kstar$lposterior) - 1000,
+              max(lpost_k$lposterior, lpost_kstar$lposterior) + 1000))
+points(lpost_kstar$sampled, lpost_kstar$lposterior, type="b", pch = 1, col = 2)
+points(lpost_k$iteration_max, lpost_k$lposterior_max, pch=19, col = 4)
+points(lpost_kstar$iteration_max, lpost_kstar$lposterior_max, pch=19, col = 2)
+```
+
+### Contributions
+
+In addition to parameter estimation we are also interested in the posterior estimates of the rank-one additive contributions $C_h=\eta_{\cdot h}\lambda_{\cdot h}^\top$, $h=1,\ldots,h$. These matrices are not identifiable, however the non-identifiable possible rotations of the contributions are limited to the class of permutations of the indices $h=1,2,\ldots$. 
+
+Hence, we include in the package the function `contributions()` which allows to re-order the contributions of each MCMC draw and estimate their posterior mean via Monte Carlo average.
+In the article the contributions are ordered w.r.t. the last iteration of the *Adaptive Gibbs Sampler*, however the function allows to select the reference iteration using the `reference` argument as follows:
+
+```{r contributions75}
+cont_75 <- contributions(out_MCMC, reference = 75)
+```
+
+If we want re-order the contributions without considering a reference iteration, we can set `reference = NULL`: in this case, the rank-one additive contributions at each iteration are re-ordered in a descending manner according to the Frobenius norm.
+
+```{r contributions}
+cont_NA <- contributions(out_MCMC, reference = NULL)
+```
+
+The function returns a list object containing the posterior estimates of the contributions (`C1`), the posterior estimates of the square of the elements of the contributions (`C2`) and the index of the reference iteration (`reference`).
+
+Dy default the function returns the posterior estimates only: if we want also the chains containing the re-ordered contributions, we can use the `chains` argument as follows:
+
+```{r contributions_chains}
+cont_NAc <- contributions(out_MCMC, reference = NULL, chain=TRUE)
+```
+
+We advise you not to save the chains since in most applications your computer may not have enough memory.
