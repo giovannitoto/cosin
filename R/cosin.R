@@ -62,6 +62,8 @@
 #' @param start_adapt An integer number of iterations before adaptation. Default is 50.
 #' @param b0,b1 Positive constants for the adaptive probability \eqn{p(t)=\exp(-b_0-b_1t)}. Default is \eqn{b_0=1} and \eqn{b_1=5\times 10^{-4}}.
 #' @param seed Seed. Default is 28.
+#' @param start A list containing the initial values for all latent quantities; if not provided, they are sampled. Default is \code{NULL}.
+#' @param last Logical: if \code{TRUE}, save latent variables at last iteration. Default is \code{FALSE}.
 #' @param output A vector containing the names of the parameters for which you want to save the draws from the posterior distribution. The possible valid strings are \code{"beta"}, \code{"gammaT"}, \code{"gammaB"}, \code{"eta"}, \code{"lambda"} and \code{"sigmacol"}. Default is \code{"all"}, which is equivalent to writing \code{c("beta", "gammaT", "gammaB", "eta", "lambda", "sigmacol")}.
 #' @param verbose Logical: if \code{TRUE}, print the number of active factors every 50 iterations. Default is \code{TRUE}.
 #'
@@ -96,7 +98,7 @@ cosin <- function(y, wT = NULL, wB = NULL, x = NULL, y_max = Inf,
                   kinit = NULL, kmax = NULL, kval = 6,
                   nrun = 100, burn = round(nrun/4), thin = 1,
                   start_adapt = 50, b0 = 1, b1 = 5*10^(-4),
-                  seed = 28, output = "all", verbose = TRUE) {
+                  seed = 28, start = NULL, last = FALSE, output = "all", verbose = TRUE) {
   # -------------------------------------------------------------------------- #
   # set seed
   if((length(seed) != 1) || !is.numeric(seed) || (seed != round(seed))) {
@@ -171,10 +173,10 @@ cosin <- function(y, wT = NULL, wB = NULL, x = NULL, y_max = Inf,
       x[, is.fact.x == FALSE] <-  scale(x[, is.fact.x == FALSE])
       x <- model.matrix(xFormula, x)
     }
-    d <- ncol(x)
+    dd <- ncol(x)
   } else {
     x <- matrix(1, nrow = 1, ncol = 1)  # not used but necessary for Rcpp
-    d <- 1
+    dd <- 1
   }
   # -------------------------------------------------------------------------- #
   if((length(kval) != 1) || !is.numeric(kval) || (kval != round(kval))) {
@@ -196,11 +198,14 @@ cosin <- function(y, wT = NULL, wB = NULL, x = NULL, y_max = Inf,
   if((length(nrun) != 1) || !is.numeric(nrun) || (nrun != round(nrun))) {
     stop("'nrun' not valid: it must be an integer.")
   }
-  if((length(burn) != 1) || !is.numeric(burn) || (burn != round(burn)) || (burn >= nrun)) {
-    stop("'burn' not valid: it must be an integer less than 'nrun'.")
+  if((length(burn) != 1) || !is.numeric(burn) || (burn != round(burn)) || (burn > nrun)) {
+    stop("'burn' not valid: it must be an integer less than or equal to 'nrun'.")
   }
-  if((length(thin) != 1) || !is.numeric(thin) || (thin != round(thin)) || (thin > nrun - burn)) {
-    stop("'thin' not valid: it must be an integer less than or equal to 'nrun - burn'.")
+  if((length(thin) != 1) || !is.numeric(thin) || (thin != round(thin))) {
+    stop("'thin' not valid: it must be an integer.")
+    if(last == FALSE & (thin > nrun - burn)) {
+      stop("'thin' not valid: it must be an integer less than or equal to 'nrun - burn'.")
+    }
   }
   if((length(start_adapt) != 1) || !is.numeric(start_adapt) || (start_adapt != round(start_adapt))) {
     stop("'start_adapt' not valid: it must be an integer.")
@@ -270,39 +275,89 @@ cosin <- function(y, wT = NULL, wB = NULL, x = NULL, y_max = Inf,
     stop("'alpha' not valid: it must be greater than or equal to 0.")
   }
   # -------------------------------------------------------------------------- #
-  # Initialize sigma^-2
-  ps <- rgamma(p, a_sigma, b_sigma)
-  # Initialize parameters related to the covariates, if x exists
-  if(!xnull) {
-    Beta <- matrix(rnorm(d * p, 0, sd_beta), nrow = p, ncol = d)    # mean coeff of the data
-    GammaT <- matrix(rnorm(qT * d), nrow = qT, ncol = d)            # x effects on Beta coeff
-    # precision of GammaT and Beta
-    prec_gammaT  <- 1 / (sd_gammaT)  ^ 2
-    prec_beta <- 1 / (sd_beta) ^ 2
-  } else {
-    # not used but necessary to call the C++ function
-    Beta <- GammaT <- matrix(1, nrow = 1, ncol = 1)
-    prec_gammaT <- prec_beta <- 0.1
+  if((length(last) != 1) || !is.logical(last)) {
+    stop("'last' not valid: it must be 'TRUE' or 'FALSE'.")
   }
-  # Initialize lambda star (pxq)
-  Lambda_star <- matrix(rnorm(p * k), nrow = p, ncol = k)  # loading matrix
-  # Initialize eta (nxk)
-  eta <- matrix(rnorm(n * k), nrow = n, ncol = k)          # latent factors
-  # Initialize GammaB (qxk) and pred (pxk)
-  GammaB <- matrix(rnorm(qB * k), nrow = qB, ncol = k)     # traits effect on local shrinkage
-  pred <- wB %*% GammaB                                    # local shrinkage coefficients
-  logit <- plogis(pred)
-  # Initialize Phi pxk
-  Phi <- matrix(rbinom(p * k, size = 1, prob = p_constant), nrow = p, ncol = k)
-  # Initialize pi_h, h = 1, ..., k
-  v <- c(rbeta(k - 1, shape1 = 1, shape2 = alpha), 1)
-  w <- v * c(1, cumprod(1 - v[-k]))  # product up to  l - 1
-  d <- rep(k - 1, k)                 # augmented data
-  rho <- rep(1, k)                   # preallocation for Bernoulli
-  # Initialize the precision matrix of lambda star
-  Plam <- diag(rgamma(k, a_theta, b_theta))
-  # Compute Lambda (pxk)
-  Lambda <- t(t(Lambda_star) * sqrt(rho)) * sqrt(Phi)
+  # -------------------------------------------------------------------------- #
+  if(is.null(start)) {
+    # Initialize sigma^-2
+    ps <- rgamma(p, a_sigma, b_sigma)
+    # Initialize parameters related to the covariates, if x exists
+    if(!xnull) {
+      Beta <- matrix(rnorm(d * p, 0, sd_beta), nrow = p, ncol = dd)  # mean coeff of the data
+      GammaT <- matrix(rnorm(qT * d), nrow = qT, ncol = dd)          # x effects on Beta coeff
+      # precision of GammaT and Beta
+      prec_gammaT  <- 1 / (sd_gammaT)^2
+      prec_beta <- 1 / (sd_beta)^2
+    } else {
+      # not used but necessary to call the C++ function
+      Beta <- GammaT <- matrix(1, nrow = 1, ncol = 1)
+      prec_gammaT <- prec_beta <- 0.1
+    }
+    # Initialize lambda star (pxq)
+    Lambda_star <- matrix(rnorm(p * k), nrow = p, ncol = k)  # loading matrix
+    # Initialize eta (nxk)
+    eta <- matrix(rnorm(n * k), nrow = n, ncol = k)          # latent factors
+    # Initialize GammaB (qxk) and pred (pxk)
+    GammaB <- matrix(rnorm(qB * k), nrow = qB, ncol = k)     # traits effect on local shrinkage
+    pred <- wB %*% GammaB                                    # local shrinkage coefficients
+    logit <- plogis(pred)
+    # Initialize Phi pxk
+    Phi <- matrix(rbinom(p * k, size = 1, prob = p_constant), nrow = p, ncol = k)
+    # Initialize pi_h, h = 1, ..., k
+    v <- c(rbeta(k - 1, shape1 = 1, shape2 = alpha), 1)
+    w <- v * c(1, cumprod(1 - v[-k]))  # product up to  l - 1
+    d <- rep(k - 1, k)                 # augmented data
+    rho <- rep(1, k)                   # preallocation for Bernoulli
+    # Initialize the precision matrix of lambda star
+    Plam <- diag(rgamma(k, a_theta, b_theta))
+    # Compute Lambda (pxk)
+    Lambda <- t(t(Lambda_star) * sqrt(rho)) * sqrt(Phi)
+  } else {
+    # check whether all necessary variables are available in start
+    required_variables <- c("nrun", "k", "kstar", "ps", "Beta", "GammaT", "Lambda_star", "eta", "GammaB", "Phi", "v", "w","d", "rho", "Plam")
+    if(check_list(start, required_variables) == FALSE) {
+      stop(paste(paste(c(required_variables), collapse = ", "), "must be stored in 'start'."))
+    }
+    # Adaptive probability
+    prob <- 1 / exp(b0 + b1 * (seq(1, nrun) + start$nrun))
+    # Initialize k and kstar
+    k <- start$k
+    kstar <- start$kstar
+    # Initialize sigma^-2
+    ps <- start$ps
+    # Initialize parameters related to the covariates, if x exists
+    if(!xnull) {
+      Beta <- start$Beta
+      GammaT <- start$GammaT
+      # precision of GammaT and Beta
+      prec_gammaT  <- 1 / (sd_gammaT)^2
+      prec_beta <- 1 / (sd_beta)^2
+    } else {
+      # not used but necessary to call the C++ function
+      Beta <- GammaT <- matrix(1, nrow = 1, ncol = 1)
+      prec_gammaT <- prec_beta <- 0.1
+    }
+    # Initialize lambda star (pxq)
+    Lambda_star <- start$Lambda_star
+    # Initialize eta (nxk)
+    eta <- start$eta
+    # Initialize GammaB (qxk) and pred (pxk)
+    GammaB <- start$GammaB
+    pred <- wB %*% GammaB
+    logit <- plogis(pred)
+    # Initialize Phi pxk
+    Phi <- start$Phi
+    # Initialize pi_h, h = 1, ..., k
+    v <- c(start$v)
+    w <- c(start$w)
+    d <- c(start$d)
+    rho <- c(start$rho)
+    # Initialize the precision matrix of lambda star
+    Plam <- start$Plam
+    # Compute Lambda (pxk)
+    Lambda <- t(t(Lambda_star) * sqrt(rho)) * sqrt(Phi)
+  }
   # -------------------------------------------------------------------------- #
   # Allocate output object memory
   valid_outputs <- c("beta",        # coefSamples          : pxd
@@ -334,12 +389,13 @@ cosin <- function(y, wT = NULL, wB = NULL, x = NULL, y_max = Inf,
   # ADAPTIVE GIBBS SAMPLING
   # -------------------------------------------------------------------------- #
   out <- Rcpp_cosin(alpha, a_sigma, a_y, a_yp1, a_theta,
-                    GammaB, b_sigma, b0, b1, burn, GammaT, b_theta,
+                    Beta,
+                    b_sigma, b0, b1, burn, b_theta,
                     d,
                     eta,
+                    GammaB, GammaT,
                     kmax, kstar,
-                    Lambda, Lambda_star, logit,
-                    Beta,
+                    Lambda, Lambda_star, last, logit,
                     nrun,
                     out,
                     Phi, Plam, prec_gammaT, prec_beta, pred, prob, ps, p_constant,
@@ -348,16 +404,14 @@ cosin <- function(y, wT = NULL, wB = NULL, x = NULL, y_max = Inf,
                     thin,
                     uu,
                     v, verbose,
-                    w, x, xnull,
-                    wT, wB)
+                    w, wT, wB,
+                    x, xnull)
   # -------------------------------------------------------------------------- #
-  for (it in 1:sp) {
-    if("sigmacol" %in% output) out$sigmacol[[it]] <- c(out$sigmacol[[it]])
-  }
+  if ("sigmacol" %in% output) out[["sigmacol"]] <- lapply(out[["sigmacol"]], c)
   out[["numFactors"]] <- c(out[["numFactors"]])
   out[["time"]] <- (proc.time() - t0)[1]
   out[["y"]] <- y                 # data                       : nxp
-  if(!xnull) out[["x"]] <- x      # covariates                 : nxd
+  if(!xnull) out[["x"]] <- x      # covariates                 : nxdd
   out[["wT"]] <- wT               # technical meta-covariates  : pxqT
   out[["wB"]]  <- wB              # biological meta-covariates : pxqB
   out[["hyperparameters"]] <- list(alpha = alpha, a_theta = a_theta,

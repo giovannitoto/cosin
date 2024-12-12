@@ -12,8 +12,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // Rcpp_cosin
-Rcpp::List Rcpp_cosin(double alpha, double a_sigma, arma::mat a_y, arma::mat a_yp1, double a_theta, arma::mat GammaB, double b_sigma, double b0, double b1, int burn, arma::mat GammaT, double b_theta, arma::vec d, arma::mat eta, int kmax, int kstar, arma::mat Lambda, arma::mat Lambda_star, arma::mat logit, arma::mat Beta, int nrun, Rcpp::List out, arma::mat Phi, arma::mat Plam, double prec_gammaT, double prec_beta, arma::mat pred, arma::vec prob, arma::vec ps, double p_constant, arma::vec rho, double sd_gammaB, int sp, int start_adapt, int thin, arma::vec uu, arma::vec v, bool verbose, arma::vec w, arma::mat x, bool xnull, arma::mat wT, arma::mat wB);
-RcppExport SEXP _cosin_Rcpp_cosin(SEXP alphaSEXP, SEXP a_sigmaSEXP, SEXP a_ySEXP, SEXP a_yp1SEXP, SEXP a_thetaSEXP, SEXP GammaBSEXP, SEXP b_sigmaSEXP, SEXP b0SEXP, SEXP b1SEXP, SEXP burnSEXP, SEXP GammaTSEXP, SEXP b_thetaSEXP, SEXP dSEXP, SEXP etaSEXP, SEXP kmaxSEXP, SEXP kstarSEXP, SEXP LambdaSEXP, SEXP Lambda_starSEXP, SEXP logitSEXP, SEXP BetaSEXP, SEXP nrunSEXP, SEXP outSEXP, SEXP PhiSEXP, SEXP PlamSEXP, SEXP prec_gammaTSEXP, SEXP prec_betaSEXP, SEXP predSEXP, SEXP probSEXP, SEXP psSEXP, SEXP p_constantSEXP, SEXP rhoSEXP, SEXP sd_gammaBSEXP, SEXP spSEXP, SEXP start_adaptSEXP, SEXP thinSEXP, SEXP uuSEXP, SEXP vSEXP, SEXP verboseSEXP, SEXP wSEXP, SEXP xSEXP, SEXP xnullSEXP, SEXP wTSEXP, SEXP wBSEXP) {
+Rcpp::List Rcpp_cosin(double alpha, double a_sigma, arma::mat a_y, arma::mat a_yp1, double a_theta, arma::mat Beta, double b_sigma, double b0, double b1, int burn, double b_theta, arma::vec d, arma::mat eta, arma::mat GammaB, arma::mat GammaT, int kmax, int kstar, arma::mat Lambda, arma::mat Lambda_star, bool last, arma::mat logit, int nrun, Rcpp::List out, arma::mat Phi, arma::mat Plam, double prec_gammaT, double prec_beta, arma::mat pred, arma::vec prob, arma::vec ps, double p_constant, arma::vec rho, double sd_gammaB, int sp, int start_adapt, int thin, arma::vec uu, arma::vec v, bool verbose, arma::vec w, arma::mat wT, arma::mat wB, arma::mat x, bool xnull);
+RcppExport SEXP _cosin_Rcpp_cosin(SEXP alphaSEXP, SEXP a_sigmaSEXP, SEXP a_ySEXP, SEXP a_yp1SEXP, SEXP a_thetaSEXP, SEXP BetaSEXP, SEXP b_sigmaSEXP, SEXP b0SEXP, SEXP b1SEXP, SEXP burnSEXP, SEXP b_thetaSEXP, SEXP dSEXP, SEXP etaSEXP, SEXP GammaBSEXP, SEXP GammaTSEXP, SEXP kmaxSEXP, SEXP kstarSEXP, SEXP LambdaSEXP, SEXP Lambda_starSEXP, SEXP lastSEXP, SEXP logitSEXP, SEXP nrunSEXP, SEXP outSEXP, SEXP PhiSEXP, SEXP PlamSEXP, SEXP prec_gammaTSEXP, SEXP prec_betaSEXP, SEXP predSEXP, SEXP probSEXP, SEXP psSEXP, SEXP p_constantSEXP, SEXP rhoSEXP, SEXP sd_gammaBSEXP, SEXP spSEXP, SEXP start_adaptSEXP, SEXP thinSEXP, SEXP uuSEXP, SEXP vSEXP, SEXP verboseSEXP, SEXP wSEXP, SEXP wTSEXP, SEXP wBSEXP, SEXP xSEXP, SEXP xnullSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -22,21 +22,22 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::mat >::type a_y(a_ySEXP);
     Rcpp::traits::input_parameter< arma::mat >::type a_yp1(a_yp1SEXP);
     Rcpp::traits::input_parameter< double >::type a_theta(a_thetaSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type GammaB(GammaBSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Beta(BetaSEXP);
     Rcpp::traits::input_parameter< double >::type b_sigma(b_sigmaSEXP);
     Rcpp::traits::input_parameter< double >::type b0(b0SEXP);
     Rcpp::traits::input_parameter< double >::type b1(b1SEXP);
     Rcpp::traits::input_parameter< int >::type burn(burnSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type GammaT(GammaTSEXP);
     Rcpp::traits::input_parameter< double >::type b_theta(b_thetaSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type d(dSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type eta(etaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type GammaB(GammaBSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type GammaT(GammaTSEXP);
     Rcpp::traits::input_parameter< int >::type kmax(kmaxSEXP);
     Rcpp::traits::input_parameter< int >::type kstar(kstarSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type Lambda(LambdaSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type Lambda_star(Lambda_starSEXP);
+    Rcpp::traits::input_parameter< bool >::type last(lastSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type logit(logitSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type Beta(BetaSEXP);
     Rcpp::traits::input_parameter< int >::type nrun(nrunSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type out(outSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type Phi(PhiSEXP);
@@ -56,11 +57,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::vec >::type v(vSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type w(wSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type x(xSEXP);
-    Rcpp::traits::input_parameter< bool >::type xnull(xnullSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type wT(wTSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type wB(wBSEXP);
-    rcpp_result_gen = Rcpp::wrap(Rcpp_cosin(alpha, a_sigma, a_y, a_yp1, a_theta, GammaB, b_sigma, b0, b1, burn, GammaT, b_theta, d, eta, kmax, kstar, Lambda, Lambda_star, logit, Beta, nrun, out, Phi, Plam, prec_gammaT, prec_beta, pred, prob, ps, p_constant, rho, sd_gammaB, sp, start_adapt, thin, uu, v, verbose, w, x, xnull, wT, wB));
+    Rcpp::traits::input_parameter< arma::mat >::type x(xSEXP);
+    Rcpp::traits::input_parameter< bool >::type xnull(xnullSEXP);
+    rcpp_result_gen = Rcpp::wrap(Rcpp_cosin(alpha, a_sigma, a_y, a_yp1, a_theta, Beta, b_sigma, b0, b1, burn, b_theta, d, eta, GammaB, GammaT, kmax, kstar, Lambda, Lambda_star, last, logit, nrun, out, Phi, Plam, prec_gammaT, prec_beta, pred, prob, ps, p_constant, rho, sd_gammaB, sp, start_adapt, thin, uu, v, verbose, w, wT, wB, x, xnull));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -104,7 +105,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_cosin_Rcpp_cosin", (DL_FUNC) &_cosin_Rcpp_cosin, 43},
+    {"_cosin_Rcpp_cosin", (DL_FUNC) &_cosin_Rcpp_cosin, 44},
     {"_cosin_truncnorm_lg", (DL_FUNC) &_cosin_truncnorm_lg, 5},
     {"_cosin_rcpp_pgdraw", (DL_FUNC) &_cosin_rcpp_pgdraw, 2},
     {"_cosin_samplepg", (DL_FUNC) &_cosin_samplepg, 1},

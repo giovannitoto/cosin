@@ -40,8 +40,7 @@ lposterior <- function(out_MCMC, frac_sampled = 1, samples = NULL,
     set.seed(seed)
   }
   # check whether all necessary variables are available in out_MCMC
-  required_variables <- c("y", "wT", "wB", "numFactors", "gammaB", "eta",
-                          "lambda", "sigmacol", "hyperparameters")
+  required_variables <- c("y", "wT", "wB", "numFactors", "gammaB", "eta", "lambda", "sigmacol", "hyperparameters")
   if(check_list(out_MCMC, required_variables) == FALSE) {
     stop(paste(paste(c(required_variables), collapse = ", "), "must be stored in the MCMC output."))
   }

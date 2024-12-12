@@ -10,12 +10,13 @@ using namespace Rcpp;
 //
 // [[Rcpp::export]]
 Rcpp::List Rcpp_cosin(double alpha, double a_sigma, arma::mat a_y, arma::mat a_yp1, double a_theta,
-          arma::mat GammaB, double b_sigma, double b0, double b1, int burn, arma::mat GammaT, double b_theta,
+          arma::mat Beta,
+          double b_sigma, double b0, double b1, int burn, double b_theta,
           arma::vec d,
           arma::mat eta,
+          arma::mat GammaB, arma::mat GammaT,
           int kmax, int kstar,
-          arma::mat Lambda, arma::mat Lambda_star, arma::mat logit,
-          arma::mat Beta,
+          arma::mat Lambda, arma::mat Lambda_star, bool last, arma::mat logit,
           int nrun,
           Rcpp::List out,
           arma::mat Phi, arma::mat Plam, double prec_gammaT, double prec_beta, arma::mat pred, arma::vec prob, arma::vec ps, double p_constant,
@@ -24,8 +25,8 @@ Rcpp::List Rcpp_cosin(double alpha, double a_sigma, arma::mat a_y, arma::mat a_y
           int thin,
           arma::vec uu,
           arma::vec v, bool verbose,
-          arma::vec w, arma::mat x, bool xnull,
-          arma::mat wT, arma::mat wB) {
+          arma::vec w, arma::mat wT, arma::mat wB,
+          arma::mat x, bool xnull) {
   // ---------------------------------------------------------------------------
   // output
   Rcpp::List BETA(sp);
@@ -195,6 +196,26 @@ Rcpp::List Rcpp_cosin(double alpha, double a_sigma, arma::mat a_y, arma::mat a_y
       }
     }
     // -------------------------------------------------------------------------
+  }
+  // ---------------------------------------------------------------------------
+  // save last draw if required
+  if (last) {
+    out["last"] = Rcpp::List::create(
+      Named("nrun") = nrun,
+      Named("k") = k,
+      Named("kstar") = kstar,
+      Named("ps") = ps,
+      Named("Beta") = Beta,
+      Named("GammaT") = GammaT,
+      Named("Lambda_star") = Lambda_star,
+      Named("eta") = eta,
+      Named("GammaB") = GammaB,
+      Named("Phi") = Phi,
+      Named("v") = v,
+      Named("w") = w,
+      Named("d") = d,
+      Named("rho") = rho,
+      Named("Plam") = Plam);
   }
   // ---------------------------------------------------------------------------
   if (!xnull) {
